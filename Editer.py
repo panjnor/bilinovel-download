@@ -166,16 +166,18 @@ class Editer(object):
             content_html = self.get_html(url, is_gbk=False)
             text = self.get_page_text(content_html)
             if page_no % 2 == 0:
-                if chap % 2 == 0:
-                    second_last_newline = text.rfind("\n", 0, text.rfind("\n"))
-                    last_newline = text.rfind("\n")
-                    text = text[:second_last_newline] + '<p class="custom-font">' + text[second_last_newline:last_newline].strip() + '</p>' + text[last_newline:]
-                    
-                else:
+
+                second_last_newline = text.rfind("\n", 0, text.rfind("\n"))
+                last_newline = text.rfind("\n")               
+                
+                # for dev print(chap,' ',second_last_newline," ",last_newline)
+                if(last_newline - second_last_newline == 1):
                     third_last_newline = text.rfind("\n", 0, text.rfind("\n", 0, text.rfind("\n")))
-                    second_last_newline = text.rfind("\n", 0, text.rfind("\n"))
                     text = text[:third_last_newline] + '<p class="custom-font">' + text[third_last_newline:second_last_newline].strip() + '</p>' + text[second_last_newline:]
+                else:
+                    text = text[:second_last_newline] + '<p class="custom-font">' + text[second_last_newline:last_newline].strip() + '</p>' + text[last_newline:]
             
+            print(text)
             text_chap += text
             url_new = url_ori.replace('.html', '_{}.html'.format(page_no+1))[len(self.url_head):]
             if url_new in content_html:

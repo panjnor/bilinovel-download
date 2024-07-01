@@ -26,7 +26,7 @@
 * 自定义彩页。
 * ...................
 
-
+比原版：针对字符乱码问题进行修复，增加read.woff2字体，增大体积换来更好的阅读体验。代码内有屎（修乱码问题之后有些多余的东西懒得删了，不是说原版），不喜勿喷
 有建议或bug可以提issue，由于软件更新频繁，可以加QQ群获得更多信息：563072544
 
 图形界面使用[PyQt-Fluent-Widgets](https://pyqt-fluent-widgets.readthedocs.io/en/latest/index.html)界面编写。

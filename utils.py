@@ -19,18 +19,28 @@ def get_cover_html(img_w, img_h):
     return img_htmls
 
 
-def text2htmls(chap_name, text):
+def text2htmls(chap_name, text,page_no):
     text_lines = text.split('\n')
     text_body = []
     text_body.append('<body>\n')
     text_body.append('<h1>' + chap_name + '</h1>\n')
-    for text_line in text_lines:
+    # Check if page_no is a multiple of 2
+    if page_no % 2 == 0:
+        # Insert custom font tag for the last line
+        text_lines[-1] = f'<p class="custom-font">{text_lines[-1]}</p>'
+    else:
+        text_lines[-1] = f'<p>{text_lines[-1]}</p>'
+    
+    for i, text_line in enumerate(text_lines[:-1]):
         if text_line.startswith('[img:'):
             img_no = text_line[5:7]
-            text_line_html = f'  <img alt=\"{img_no}\" src=\"../Images/{img_no}.jpg\"/>\n'
+            text_line_html = f'  <img alt="{img_no}" src="../Images/{img_no}.jpg"/>\n'
         else:
             text_line_html = '<p>' + text_line + '</p>\n'
         text_body.append(text_line_html)
+    
+    # Add the last line, which has already been processed
+    text_body.append(text_lines[-1] + '\n')
     text_body.append('</body>\n')
     text_head = []
     text_head.append('<?xml version="1.0" encoding="UTF-8" standalone="no" ?>\n')
@@ -39,7 +49,7 @@ def text2htmls(chap_name, text):
     text_head.append('<html xmlns=\"http://www.w3.org/1999/xhtml\">\n')
     text_head.append('<head>\n')
     text_head.append('<title>'+ chap_name+'</title>\n')
-    text_head.append('<style>p{text-indent:2em;}</style>\n')
+    text_head.append("""<style>@font-face {font-family: 'ReadFont';src: url('read.woff2') format('woff2');font-display: swap;}.custom-font {font-family: 'ReadFont';}</style>\n""")
     text_head.append('</head>\n')
     text_htmls = text_head + text_body + ['</html>']
     return text_htmls

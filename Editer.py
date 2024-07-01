@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding:utf-8 -*-
-
+#text2htmls
 import requests  # 用来抓取网页的html源码
 from bs4 import BeautifulSoup  # 用于代替正则式 取源码中相应标签中的内容
 import time  # 时间相关操作
@@ -18,7 +18,6 @@ from concurrent.futures import ThreadPoolExecutor, wait
 import pickle
 from selenium import webdriver
 from selenium.webdriver.edge.options import Options
-
 lock = threading.RLock()
 
 class Editer(object):
@@ -92,6 +91,10 @@ class Editer(object):
 
         self.img_path = os.path.join(self.temp_path,  'OEBPS/Images')
         os.makedirs(self.img_path, exist_ok=True)
+
+        src_file = os.path.join(os.path.dirname(__file__), 'read.woff2')
+        dest_file = os.path.join(self.text_path, 'read.woff2')
+        shutil.copy(src_file, dest_file)
     
     def get_index_url(self):
         self.volume = {}
@@ -148,7 +151,8 @@ class Editer(object):
         text = BeautifulSoup(text_html, 'html.parser').get_text()
         return text
     
-    def get_chap_text(self, url, chap_name, return_next_chapter=False):
+
+    def get_chap_text(self, url, chap_name, chap,return_next_chapter=False):
         text_chap = ''
         page_no = 1 
         url_ori = url
@@ -161,6 +165,17 @@ class Editer(object):
             print(str_out)
             content_html = self.get_html(url, is_gbk=False)
             text = self.get_page_text(content_html)
+            if page_no % 2 == 0:
+                if chap % 2 == 0:
+                    second_last_newline = text.rfind("\n", 0, text.rfind("\n"))
+                    last_newline = text.rfind("\n")
+                    text = text[:second_last_newline] + '<p class="custom-font">' + text[second_last_newline:last_newline].strip() + '</p>' + text[last_newline:]
+                    
+                else:
+                    third_last_newline = text.rfind("\n", 0, text.rfind("\n", 0, text.rfind("\n")))
+                    second_last_newline = text.rfind("\n", 0, text.rfind("\n"))
+                    text = text[:third_last_newline] + '<p class="custom-font">' + text[third_last_newline:second_last_newline].strip() + '</p>' + text[second_last_newline:]
+            
             text_chap += text
             url_new = url_ori.replace('.html', '_{}.html'.format(page_no+1))[len(self.url_head):]
             if url_new in content_html:
@@ -168,6 +183,7 @@ class Editer(object):
                 url = self.url_head + url_new
             else:
                 if return_next_chapter:
+
                     next_chap_url = self.url_head + re.search(r'书签</a><a href="(.*?)">下一章</a>', content_html).group(1)
                 break
         return text_chap, next_chap_url
@@ -178,20 +194,22 @@ class Editer(object):
         text_no=0   #text_no正文章节编号(排除插图)   chap_no 是所有章节编号
         for chap_no, (chap_name, chap_url) in enumerate(zip(self.volume['chap_names'], self.volume['chap_urls'])):
             is_fix_next_chap_url = (chap_name in self.missing_last_chap_list)
-            text, next_chap_url = self.get_chap_text(chap_url, chap_name, return_next_chapter=is_fix_next_chap_url)
+            text, next_chap_url = self.get_chap_text(chap_url, chap_name, text_no,return_next_chapter=is_fix_next_chap_url)
             if is_fix_next_chap_url: 
                 self.volume['chap_urls'][chap_no+1] = next_chap_url #正向修复
             if chap_name == self.color_chap_name:
-                text_html_color = text2htmls(self.color_page_name, text)
+                text_html_color = text2htmls(self.color_page_name, text,0)
             else:
-                text_html = text2htmls(chap_name, text)
+                text_html = text2htmls(chap_name, text,0)
                 textfile = self.text_path + f'/{str(text_no).zfill(2)}.xhtml'
                 with open(textfile, 'w+', encoding='utf-8') as f:
-                    f.writelines(text_html)
-                for text_line in text_html:
-                    img_str = re.search(r"<img(.*?)\/>", text_line)
-                    if img_str is not None:
-                        img_strs.append(img_str.group(0))
+                    for text_line in text_html:
+                        img_str = re.search(r"<img(.*?)\/>", text_line)
+                        if img_str is not None:
+                        # 添加 <br> 标签到图片后面
+                            text_line = text_line.replace(img_str.group(0), img_str.group(0) + '\n'+'<p></p>'+'\n'+'<p></p>')
+                            img_strs.append(img_str.group(0))
+                        f.write(text_line )    
                 text_no += 1
             
         # 将彩页中后文已经出现的图片删除，避免重复
@@ -381,7 +399,10 @@ class Editer(object):
         else:
             with open(filepath, 'wb') as f:
                 pickle.dump((self.volume ,self.img_url_map), f)
-    
+        # Copy read.woff2 to OEBPS/Text
+        src_file = os.path.join(os.path.dirname(__file__), 'read.woff2')
+        dest_file = os.path.join(self.text_path, 'read.woff2')
+        shutil.copy(src_file, dest_file)
     def is_buffer(self):
         filename = 'buffer.pkl'
         filepath = os.path.join(self.temp_path, filename)

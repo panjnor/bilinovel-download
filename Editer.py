@@ -18,6 +18,7 @@ from concurrent.futures import ThreadPoolExecutor, wait
 import pickle
 from selenium import webdriver
 from selenium.webdriver.edge.options import Options
+import re
 lock = threading.RLock()
 
 class Editer(object):
@@ -59,6 +60,21 @@ class Editer(object):
         self.url_buffer = []
         self.max_thread_num = 8
         self.pool = ThreadPoolExecutor(self.max_thread_num)
+
+    #解密
+    def findcrypt(self,text):
+        lines = text.splitlines()  # 将文本按行分割成列表
+        last_text_line_start = None
+        last_text_line_end = None
+
+        for i in range(len(lines) - 1, -1, -1):  # 从后向前遍历行
+            line = lines[i]
+            if line.strip() and not re.match(r"^\[img:", line):  # 检查是否非空且不以 [img: 开头
+                last_text_line_start = text.rfind(line)  # 找到该行在原始文本中的起始位置
+                last_text_line_end = last_text_line_start + len(line) #计算该行在原始文本中的结束位置
+                break  # 找到符合条件的行后退出循环
+
+        return last_text_line_start, last_text_line_end       
         
     # 获取html文档内容
     def get_html(self, url, is_gbk=False):
@@ -166,16 +182,8 @@ class Editer(object):
             content_html = self.get_html(url, is_gbk=False)
             text = self.get_page_text(content_html)
             if page_no % 2 == 0:
-
-                second_last_newline = text.rfind("\n", 0, text.rfind("\n"))
-                last_newline = text.rfind("\n")               
-                
-                # for dev print(chap,' ',second_last_newline," ",last_newline)
-                if(last_newline - second_last_newline == 1):
-                    third_last_newline = text.rfind("\n", 0, text.rfind("\n", 0, text.rfind("\n")))
-                    text = text[:third_last_newline] + '<p class="custom-font">' + text[third_last_newline:second_last_newline].strip() + '</p>' + text[second_last_newline:]
-                else:
-                    text = text[:second_last_newline] + '<p class="custom-font">' + text[second_last_newline:last_newline].strip() + '</p>' + text[last_newline:]
+                se,la = self.findcrypt(text)
+                text = text[:se] + '\n<p class="custom-font">' + text[se:la].strip() + '</p>' + text[la:]
             
             print(text)
             text_chap += text
